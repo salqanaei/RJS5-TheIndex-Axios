@@ -1,25 +1,63 @@
 import React, { Component } from "react";
 
-import authors from "./data.js";
+import axios from "axios";
 
 // Components
 import Sidebar from "./Sidebar";
 import AuthorsList from "./AuthorsList";
 import AuthorDetail from "./AuthorDetail";
+import Loading from "./Loading";
 
 class App extends Component {
   state = {
     currentAuthor: null,
-    filteredAuthors: authors
+    filteredAuthors: [],
+    authors: [],
+    loading: true
   };
 
-  selectAuthor = author => this.setState({ currentAuthor: author });
+  fetchAuthors = async () => {
+    try {
+      let response = await axios.get(
+        "https://the-index-api.herokuapp.com/api/authors/"
+      );
+      let authors = response.data;
+      this.setState({
+        authors: authors,
+        filteredAuthors: authors,
+        loading: false
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  componentDidMount() {
+    this.fetchAuthors();
+  }
+
+  selectAuthor = async authorid => {
+    this.setState({ loading: true });
+    try {
+      let response = await axios.get(
+        "https://the-index-api.herokuapp.com/api/authors/" + authorid
+      );
+      console.log(response.data);
+      let selectedauthor = response.data;
+      this.setState({
+        currentAuthor: selectedauthor,
+        loading: false
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   unselectAuthor = () => this.setState({ currentAuthor: null });
 
   filterAuthors = query => {
     query = query.toLowerCase();
-    let filteredAuthors = authors.filter(author => {
+    let filteredAuthors = this.state.authors.filter(author => {
       return `${author.first_name} ${author.last_name}`
         .toLowerCase()
         .includes(query);
@@ -30,7 +68,7 @@ class App extends Component {
   getContentView = () => {
     if (this.state.currentAuthor) {
       return <AuthorDetail author={this.state.currentAuthor} />;
-    } else {
+    } else if (!this.state.loading) {
       return (
         <AuthorsList
           authors={this.state.filteredAuthors}
@@ -38,6 +76,8 @@ class App extends Component {
           filterAuthors={this.filterAuthors}
         />
       );
+    } else {
+      return <Loading />;
     }
   };
 
